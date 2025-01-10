@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentiment-analysis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sentiment-analysis
+  template:
+    metadata:
+      labels:
+        app: sentiment-analysis
+    spec:
+      containers:
+      - name: sentiment-analysis
+        image: taleenarq/sentiment-analysis:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 4040
+        env:
+        - name: SPARK_MASTER
+          value: "k8s://https://kubernetes.default.svc"
+        - name: FIREBASE_CREDENTIALS
+          value: "/app/fb.json"
+        volumeMounts:
+        - name: firebase-credentials
+          mountPath: /app/fb.json
+          subPath: fb.json
+      volumes:
+      - name: firebase-credentials
+        secret:
+          secretName: firebase-credentials-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentiment-analysis-service
+spec:
+  selector:
+    app: sentiment-analysis
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 4040
+  type: LoadBalancer
